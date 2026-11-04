@@ -28,11 +28,11 @@
     }
 
     #unity-container {
-      width: 100%;
-      height: 100%;
+      width: min(100vw, 56.25vh);
+      height: min(100vh, 177.7778vw);
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
+      margin: auto;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -116,6 +116,7 @@
 
   <script>
     const canvas = document.querySelector("#unity-canvas");
+    const unityContainer = document.querySelector("#unity-container");
     const loadingCover = document.querySelector("#loading-cover");
     const progressBarFill = document.querySelector("#progress-bar-fill");
 
@@ -124,9 +125,10 @@
     const dpr = Math.min(window.devicePixelRatio || 1, maxDPR);
 
     function resizeCanvas() {
-      // Width-lock scaling: 100% horizontal coverage
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
+      // Keep Unity's render surface portrait even when the browser viewport is landscape.
+      const bounds = unityContainer.getBoundingClientRect();
+      canvas.width = Math.round(bounds.width * dpr);
+      canvas.height = Math.round(bounds.height * dpr);
     }
 
     window.addEventListener('resize', resizeCanvas);
