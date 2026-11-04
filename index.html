@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <!-- Viewport width-locked portrait mode, strictly disable zoom and gesture zooming -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>CyberWhack 9X - Subterranean Arcade</title>
+  
+  <style>
+    /* Zero margin, warm desert sand background */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #ed973e;
+      position: fixed;
+      touch-action: none; /* Disables double-tap zoom, pinch-to-zoom, pull-to-refresh */
+    }
+
+    #unity-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ed973e;
+    }
+
+    #unity-canvas {
+      width: 100%;
+      height: 100%;
+      background: #ed973e;
+      display: block;
+      touch-action: none;
+      /* Safe area insets for notches & home bars */
+      padding-top: env(safe-area-inset-top, 44px);
+      padding-bottom: env(safe-area-inset-bottom, 34px);
+    }
+
+    #loading-cover {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ed973e;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 99;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    .cyber-title {
+      color: #fff8e1;
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      text-shadow: 2px 3px 0 #5c3818;
+    }
+
+    .cyber-subtitle {
+      color: #ffe082;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+    }
+
+    .progress-bar-container {
+      width: 240px;
+      height: 12px;
+      background: #5c3818;
+      border: 2px solid #8d5b28;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: #ffb700;
+      box-shadow: 0 0 8px #ff9800;
+      transition: width 0.1s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    
+    <div id="loading-cover">
+      <div class="cyber-title">WHACK-A-MOLE</div>
+      <div class="cyber-subtitle">GET READY TO WHACK!</div>
+      <div class="progress-bar-container">
+        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.querySelector("#unity-canvas");
+    const loadingCover = document.querySelector("#loading-cover");
+    const progressBarFill = document.querySelector("#progress-bar-fill");
+
+    // Dynamic Pixel Ratio Clamping: Max 2.0 to prevent GPU thermal throttling
+    const maxDPR = 2.0;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDPR);
+
+    function resizeCanvas() {
+      // Width-lock scaling: 100% horizontal coverage
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Browser Gesture Neutralization
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+    // Mobile WebAudio Context Unlock Trigger on initial contact
+    function unlockWebAudio() {
+      if (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined') {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+      }
+      window.removeEventListener('pointerdown', unlockWebAudio);
+      window.removeEventListener('touchstart', unlockWebAudio);
+    }
+    window.addEventListener('pointerdown', unlockWebAudio, { once: true, passive: true });
+    window.addEventListener('touchstart', unlockWebAudio, { once: true, passive: true });
+
+    // Unity Loader
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/WhackAMoleWebGL.loader.js";
+    const config = {
+      dataUrl: buildUrl + "/WhackAMoleWebGL.data.br",
+      frameworkUrl: buildUrl + "/WhackAMoleWebGL.framework.js.br",
+      codeUrl: buildUrl + "/WhackAMoleWebGL.wasm.br",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "Whack a Mole",
+      productVersion: "1.0",
+      devicePixelRatio: dpr
+    };
+
+    const script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        progressBarFill.style.width = 100 * progress + "%";
+      }).then((unityInstance) => {
+        loadingCover.style.display = "none";
+      }).catch((message) => {
+        console.error(message);
+      });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
